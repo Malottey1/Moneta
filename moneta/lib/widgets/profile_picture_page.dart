@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../controllers/register_controller.dart';
 
-class ProfilePicturePage extends StatelessWidget {
+class ProfilePicturePage extends StatefulWidget {
   final String title;
   final String firstName;
   final RegisterController controller;
@@ -11,6 +13,23 @@ class ProfilePicturePage extends StatelessWidget {
     required this.firstName,
     required this.controller,
   });
+
+  @override
+  _ProfilePicturePageState createState() => _ProfilePicturePageState();
+}
+
+class _ProfilePicturePageState extends State<ProfilePicturePage> {
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage(ImageSource source) async {
+    final pickedFile = await _picker.pickImage(source: source);
+    setState(() {
+      if (pickedFile != null) {
+        _imageFile = File(pickedFile.path);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +49,7 @@ class ProfilePicturePage extends StatelessWidget {
           ),
           SizedBox(height: 50),
           Text(
-            title,
+            widget.title,
             textAlign: TextAlign.left,
             style: const TextStyle(
               fontSize: 35,
@@ -46,19 +65,22 @@ class ProfilePicturePage extends StatelessWidget {
                 CircleAvatar(
                   radius: 130,
                   backgroundColor: Colors.grey[200],
-                  child: Icon(
-                    Icons.person,
-                    size: 50,
-                    color: Colors.grey[400],
-                  ),
+                  backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,
+                  child: _imageFile == null
+                      ? Icon(
+                          Icons.person,
+                          size: 70,
+                          color: Colors.grey[400],
+                        )
+                      : null,
                 ),
                 Positioned(
                   bottom: 0,
-                  right: 0,
+                  right: 30,
                   child: IconButton(
-                    icon: const Icon(Icons.camera_alt, color: Colors.teal),
+                    icon: const Icon(Icons.camera_alt, size: 30, color: Colors.teal),
                     onPressed: () {
-                      // Implement your logic to upload or take a picture
+                      _showPicker(context);
                     },
                   ),
                 ),
@@ -68,7 +90,7 @@ class ProfilePicturePage extends StatelessWidget {
           SizedBox(height: 10),
           Center(
             child: Text(
-              firstName,
+              widget.firstName,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -90,7 +112,7 @@ class ProfilePicturePage extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   ),
                   onPressed: () {
-                    controller.goToHomeScreen(context);
+                    widget.controller.goToHomeScreen(context);
                   },
                   child: Text(
                     'Done',
@@ -113,7 +135,7 @@ class ProfilePicturePage extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   ),
                   onPressed: () {
-                    controller.skipPage();
+                    widget.controller.skipPage();
                   },
                   child: Text(
                     'Skip',
@@ -130,6 +152,36 @@ class ProfilePicturePage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext bc) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: Icon(Icons.photo_library),
+                title: Text('Photo Library'),
+                onTap: () {
+                  _pickImage(ImageSource.gallery);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_camera),
+                title: Text('Camera'),
+                onTap: () {
+                  _pickImage(ImageSource.camera);
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

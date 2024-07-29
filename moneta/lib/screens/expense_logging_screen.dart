@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ExpenseLoggingScreen extends StatefulWidget {
   @override
@@ -10,6 +13,17 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
   DateTime selectedDate = DateTime.now();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+  XFile? receiptImage;
+
+  Future<void> _pickImage(ImageSource source) async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? pickedImage = await _picker.pickImage(source: source);
+    if (pickedImage != null) {
+      setState(() {
+        receiptImage = pickedImage;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,8 +120,8 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                   ),
                   icon: Icon(Icons.camera_alt, color: Colors.teal),
-                  onPressed: () {
-                    // Implement attach receipt logic
+                  onPressed: () async {
+                    await _showImageSourceActionSheet(context);
                   },
                   label: Text(
                     'Attach Receipt',
@@ -121,9 +135,48 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
                 ),
               ],
             ),
+            if (receiptImage != null) ...[
+              SizedBox(height: 16.0),
+              Center(
+                child: Image.file(
+                  File(receiptImage!.path),
+                  height: 200,
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _showImageSourceActionSheet(BuildContext context) async {
+    return showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: Icon(Icons.photo_library),
+                title: Text('Photo Library'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_camera),
+                title: Text('Camera'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

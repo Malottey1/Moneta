@@ -1,6 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/settings_utils.dart';
+import '../widgets/settings_widgets.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
+  @override
+  _SettingsScreenState createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _pushNotifications = true;
+  bool _offlineAccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _pushNotifications = prefs.getBool('pushNotifications') ?? true;
+      _offlineAccess = prefs.getBool('offlineAccess') ?? false;
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setBool('pushNotifications', _pushNotifications);
+    prefs.setBool('offlineAccess', _offlineAccess);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,14 +97,37 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 24.0),
-            _buildSectionTitle('Account'),
-            _buildListTile(Icons.person, 'Username', 'leslieras'),
-            _buildListTile(Icons.phone, 'Mobile Number', '(405) 439 - 3985'),
-            _buildListTile(Icons.lock, 'Password', '', trailing: Icon(Icons.chevron_right)),
+            buildSectionTitle('Account'),
+            buildListTile(Icons.person, 'Username', 'leslieras'),
+            buildListTile(Icons.phone, 'Mobile Number', '(405) 439 - 3985'),
+            buildListTile(Icons.lock, 'Password', '', trailing: Icon(Icons.chevron_right)),
             SizedBox(height: 24.0),
-            _buildSectionTitle('Notifications'),
-            _buildSwitchListTile(Icons.notifications, 'Push Notifications', true),
-            _buildSwitchListTile(Icons.cloud_off, 'Offline Access', false),
+            buildSectionTitle('Notifications'),
+            buildSwitchListTile(
+              Icons.notifications,
+              'Push Notifications',
+              _pushNotifications,
+              (bool newValue) {
+                setState(() {
+                  _pushNotifications = newValue;
+                  _saveSettings();
+                  if (newValue) {
+                    showNotification();
+                  }
+                });
+              },
+            ),
+            buildSwitchListTile(
+              Icons.cloud_off,
+              'Offline Access',
+              _offlineAccess,
+              (bool newValue) {
+                setState(() {
+                  _offlineAccess = newValue;
+                  _saveSettings();
+                });
+              },
+            ),
             ListTile(
               leading: Icon(Icons.sync),
               title: Text(
@@ -100,59 +154,20 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 24.0),
-            _buildSectionTitle('Support'),
-            _buildListTile(Icons.help, 'Help Center', '', trailing: Icon(Icons.chevron_right)),
-            _buildListTile(Icons.feedback, 'Send Feedback', '', trailing: Icon(Icons.chevron_right)),
+            buildSectionTitle('Support'),
+            buildListTile(Icons.help, 'Help Center', '', trailing: Icon(Icons.chevron_right)),
+            buildListTile(
+              Icons.feedback,
+              'Send Feedback',
+              '',
+              trailing: Icon(Icons.chevron_right),
+              onTap: () {
+                sendFeedback();
+              },
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontFamily: 'SpaceGrotesk',
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.black,
-      ),
-    );
-  }
-
-  Widget _buildListTile(IconData icon, String title, String subtitle, {Widget? trailing}) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontFamily: 'SpaceGrotesk',
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
-      trailing: trailing,
-    );
-  }
-
-  Widget _buildSwitchListTile(IconData icon, String title, bool value) {
-    return SwitchListTile(
-      activeColor: Colors.teal,
-      secondary: Icon(icon),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontFamily: 'SpaceGrotesk',
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      value: value,
-      onChanged: (bool newValue) {
-        // Implement your logic here
-      },
     );
   }
 }

@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
             response['first_name'],
             response['last_name'],
             response['email'],
-            'http://192.168.102.97/api/moneta/profile-photos/${response['profile_picture']}'
+            'https://moneta.icu/api/profile-photos/${response['profile_picture']}'
           );
 
           Navigator.pushReplacement(

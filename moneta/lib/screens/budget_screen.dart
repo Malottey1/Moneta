@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:moneta/screens/budget_edit.dart';
 import 'package:moneta/screens/budget_setting.dart';
 import 'package:moneta/widgets/budget_item.dart';
 import 'package:moneta/services/api_service.dart';
@@ -87,11 +88,30 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                         final spent = double.tryParse(budget['spent']?.toString() ?? '0') ?? 0.0;
                         final progress = allocated != 0 ? (spent / allocated * 100).toInt() : 0;
 
-                        return BudgetItem(
-                          category: budget['category_name'],
-                          allocated: 'GHS $allocated',
-                          spent: 'GHS $spent',
-                          progress: progress,
+                        return GestureDetector(
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => EditBudgetScreen(
+                                  id: budget['budget_id'].toString(),
+                                  category: budget['category_name'].toString(),
+                                  allocated: budget['amount'].toString(),
+                                  startDate: budget['start_date'].toString(),
+                                  endDate: budget['end_date'].toString(),
+                                ),
+                              ),
+                            );
+                            if (result == true) {
+                              fetchBudgets(); // Refresh the list after editing a budget
+                            }
+                          },
+                          child: BudgetItem(
+                            category: budget['category_name'],
+                            allocated: 'GHS $allocated',
+                            spent: 'GHS $spent',
+                            progress: progress,
+                          ),
                         );
                       },
                     ),

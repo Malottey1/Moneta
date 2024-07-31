@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:moneta/screens/budget_setting.dart';
+import 'package:moneta/screens/expense_logging_screen.dart';
+import 'package:moneta/screens/expense_screen.dart';
+import 'package:moneta/screens/reports_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:moneta/services/api_service.dart';
 import 'package:moneta/providers/user_provider.dart';
@@ -62,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
         isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load data. Please try again.')),
+        SnackBar(content: Text('View your summary here.')),
       );
     }
   }
@@ -117,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications, color: Colors.black),
+            icon: Icon(Icons.notifications, color: Colors.white),
             onPressed: () {
               // Implement your logic here
             },
@@ -357,19 +361,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: Icons.add,
                             label: 'Add Expense',
                             onPressed: () {
-                              // Implement your logic here
+                               Navigator.push(context, MaterialPageRoute(builder: (context) => ExpenseLoggingScreen()));
                             }),
                         ActionButton(
                             icon: Icons.pie_chart,
                             label: 'View Reports',
                             onPressed: () {
-                              // Implement your logic here
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => ExpenseReportScreen()));
                             }),
                         ActionButton(
                             icon: Icons.settings,
                             label: 'Set Budgets',
                             onPressed: () {
-                              // Implement your logic here
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => CreateBudgetScreen()));
                             }),
                       ],
                     ),

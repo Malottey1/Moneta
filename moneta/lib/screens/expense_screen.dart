@@ -13,7 +13,10 @@ class ExpenseScreen extends StatefulWidget {
 
 class _ExpenseScreenState extends State<ExpenseScreen> {
   List<dynamic> expenses = [];
+  List<dynamic> filteredExpenses = [];
   bool isLoading = true;
+  String searchQuery = '';
+  String selectedFilter = 'Newest';
 
   @override
   void initState() {
@@ -21,12 +24,13 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     fetchExpenses();
   }
 
-  Future<void> fetchExpenses() async {
+  Future<void> fetchExpenses({String sort = 'date_desc', String search = ''}) async {
     final userId = Provider.of<UserProvider>(context, listen: false).userId;
     try {
-      final fetchedExpenses = await ApiService().getExpenses(userId);
+      final fetchedExpenses = await ApiService().getExpenses(userId, sort: sort, search: search);
       setState(() {
         expenses = fetchedExpenses;
+        filteredExpenses = fetchedExpenses;
         isLoading = false;
       });
     } catch (e) {
@@ -41,15 +45,30 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
 
   void _filterExpenses(String filter) {
     setState(() {
-      if (filter == 'Newest') {
-        expenses.sort((a, b) => DateTime.parse(b['date']).compareTo(DateTime.parse(a['date'])));
-      } else if (filter == 'Oldest') {
-        expenses.sort((a, b) => DateTime.parse(a['date']).compareTo(DateTime.parse(b['date'])));
-      } else if (filter == 'Highest') {
-        expenses.sort((a, b) => b['amount'].compareTo(a['amount']));
-      } else if (filter == 'Lowest') {
-        expenses.sort((a, b) => a['amount'].compareTo(b['amount']));
+      selectedFilter = filter;
+      switch (filter) {
+        case 'Newest':
+          fetchExpenses(sort: 'date_desc', search: searchQuery);
+          break;
+        case 'Oldest':
+          fetchExpenses(sort: 'date_asc', search: searchQuery);
+          break;
+        case 'Highest':
+          fetchExpenses(sort: 'amount_desc', search: searchQuery);
+          break;
+        case 'Lowest':
+          fetchExpenses(sort: 'amount_asc', search: searchQuery);
+          break;
+        default:
+          fetchExpenses(sort: 'date_desc', search: searchQuery);
       }
+    });
+  }
+
+  void _searchExpenses(String query) {
+    setState(() {
+      searchQuery = query;
+      fetchExpenses(sort: selectedFilter.toLowerCase(), search: query);
     });
   }
 
@@ -89,12 +108,14 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
               child: TextField(
                 decoration: InputDecoration(
                   hintText: 'Search Expenses',
+                  hintStyle: TextStyle(fontFamily: 'SpaceGrotesk'),
                   border: InputBorder.none,
                   suffixIcon: Icon(Icons.search, color: Colors.black),
                   contentPadding: EdgeInsets.all(16.0),
                 ),
+                style: TextStyle(fontFamily: 'SpaceGrotesk'),
                 onChanged: (value) {
-                  // Implement search logic
+                  _searchExpenses(value);
                 },
               ),
             ),
@@ -103,25 +124,29 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 FilterChip(
-                  label: Text('Newest'),
+                  label: Text('Newest', style: TextStyle(fontFamily: 'SpaceGrotesk')),
+                  selected: selectedFilter == 'Newest',
                   onSelected: (selected) {
                     _filterExpenses('Newest');
                   },
                 ),
                 FilterChip(
-                  label: Text('Oldest'),
+                  label: Text('Oldest', style: TextStyle(fontFamily: 'SpaceGrotesk')),
+                  selected: selectedFilter == 'Oldest',
                   onSelected: (selected) {
                     _filterExpenses('Oldest');
                   },
                 ),
                 FilterChip(
-                  label: Text('Highest'),
+                  label: Text('Highest', style: TextStyle(fontFamily: 'SpaceGrotesk')),
+                  selected: selectedFilter == 'Highest',
                   onSelected: (selected) {
                     _filterExpenses('Highest');
                   },
                 ),
                 FilterChip(
-                  label: Text('Lowest'),
+                  label: Text('Lowest', style: TextStyle(fontFamily: 'SpaceGrotesk')),
+                  selected: selectedFilter == 'Lowest',
                   onSelected: (selected) {
                     _filterExpenses('Lowest');
                   },
@@ -133,9 +158,9 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                 ? Center(child: CircularProgressIndicator())
                 : Expanded(
                     child: ListView.builder(
-                      itemCount: expenses.length,
+                      itemCount: filteredExpenses.length,
                       itemBuilder: (context, index) {
-                        final expense = expenses[index];
+                        final expense = filteredExpenses[index];
                         return GestureDetector(
                           onTap: () {
                             Navigator.push(
@@ -147,7 +172,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                                   description: expense['description'],
                                   amount: 'GHS ${expense['amount']}',
                                   date: expense['date'],
-                                  receiptImageUrl: 'http://192.168.102.97/api/moneta/receipts/${expense['receipt_image']}', // Assuming this is the path structure
+                                  receiptImageUrl: 'https://moneta.icu/api/receipts/${expense['receipt_image']}', // Assuming this is the path structure
                                 ),
                               ),
                             );

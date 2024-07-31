@@ -44,11 +44,17 @@ class SidebarMenu extends StatelessWidget {
                         ),
                       ],
                     ),
-                    CircleAvatar(
-                      radius: 25,
-                      backgroundImage: userProvider.profilePictureUrl != null
-                          ? NetworkImage(userProvider.profilePictureUrl!)
-                          : AssetImage('assets/images/moneta-logo-2.png') as ImageProvider,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen()));
+                      },
+                      child: CircleAvatar(
+                        radius: 25,
+                        backgroundImage: userProvider.profilePictureUrl != null
+                            ? NetworkImage(userProvider.profilePictureUrl!)
+                            : AssetImage('assets/images/moneta-logo-2.png') as ImageProvider,
+                      ),
                     ),
                   ],
                 ),

@@ -23,6 +23,8 @@ dependencies:
   syncfusion_flutter_pdf: ^20.4.54
   charts_flutter: ^0.12.0
   path_provider: ^2.0.11
+  sqflite: ^2.0.0+4
+  flutter_email_sender: ^5.0.2
 
     
 
@@ -45,6 +47,7 @@ flutter:
     - assets/images/on-boarding-screen-second.png
     - assets/images/on-boarding-screen-third.png
     - assets/images/on-boarding-screen-fourth.png
+    - assets/images/receipt_placeholder.png
   fonts:
     - family: SpaceGrotesk
       fonts:

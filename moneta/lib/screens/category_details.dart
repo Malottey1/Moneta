@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'expense_details.dart';
 
 class CategoryDetailsScreen extends StatelessWidget {
   final String category;
@@ -58,7 +59,25 @@ class CategoryDetailsScreen extends StatelessWidget {
               child: ListView.builder(
                 itemCount: transactions.length,
                 itemBuilder: (context, index) {
-                  return _buildTransactionItem(transactions[index]);
+                  final transaction = transactions[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ExpenseDetailsScreen(
+                            id: transaction.id,
+                            category: category,
+                            description: transaction.description,
+                            amount: transaction.amount,
+                            date: transaction.date,
+                            receiptImageUrl: transaction.receiptImageUrl,
+                          ),
+                        ),
+                      );
+                    },
+                    child: _buildTransactionItem(transaction),
+                  );
                 },
               ),
             ),
@@ -152,13 +171,17 @@ class CategoryDetailsScreen extends StatelessWidget {
 }
 
 class TransactionItem {
+  final String id;
   final String date;
   final String description;
   final String amount;
+  final String receiptImageUrl;
 
   TransactionItem({
+    required this.id,
     required this.date,
     required this.description,
     required this.amount,
+    required this.receiptImageUrl,
   });
 }

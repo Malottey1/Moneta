@@ -1,7 +1,9 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:moneta/services/api_service.dart';
+import 'package:provider/provider.dart';
+import 'package:moneta/providers/user_provider.dart';
 
 class ExpenseLoggingScreen extends StatefulWidget {
   @override
@@ -14,6 +16,27 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
   final TextEditingController amountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   XFile? receiptImage;
+  bool _isLoading = false;
+  List<String> categories = ['Select a category'];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final fetchedCategories = await ApiService().getCategories();
+      setState(() {
+        categories.addAll(fetchedCategories);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch categories. Please try again.')),
+      );
+    }
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     final ImagePicker _picker = ImagePicker();
@@ -23,6 +46,45 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
         receiptImage = pickedImage;
       });
     }
+  }
+
+  void _logExpense() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userId = userProvider.userId;
+
+    try {
+      final response = await ApiService().logExpense(
+        userId, // Use the actual user ID from the provider
+        categories.indexOf(selectedCategory), // Using index as the ID
+        double.parse(amountController.text),
+        selectedDate.toIso8601String(),
+        descriptionController.text,
+        receiptImage != null ? File(receiptImage!.path) : null,
+      );
+
+      if (response['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Expense logged successfully')),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'])),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to log expense. Please try again.')),
+      );
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
@@ -63,7 +125,7 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
             _buildDropdown(
               label: 'Category',
               value: selectedCategory,
-              items: ['Select a category', 'Food', 'Travel', 'Utilities', 'Groceries', 'Restaurants'],
+              items: categories,
               onChanged: (String? newValue) {
                 setState(() {
                   selectedCategory = newValue!;
@@ -98,18 +160,20 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   ),
-                  onPressed: () {
-                    // Implement save logic
-                  },
-                  child: Text(
-                    'Save',
-                    style: TextStyle(
-                      fontFamily: 'SpaceGrotesk',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  onPressed: _isLoading ? null : _logExpense,
+                  child: _isLoading
+                      ? CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : Text(
+                          'Save',
+                          style: TextStyle(
+                            fontFamily: 'SpaceGrotesk',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
@@ -256,7 +320,7 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
 
   Widget _buildDatePicker({required String label, required DateTime selectedDate, required ValueChanged<DateTime> onDateChanged}) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,

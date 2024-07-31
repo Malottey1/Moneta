@@ -1,8 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:moneta/screens/budget_setting.dart';
 import 'package:moneta/widgets/budget_item.dart';
+import 'package:moneta/services/api_service.dart';
+import 'package:provider/provider.dart';
+import 'package:moneta/providers/user_provider.dart';
 
+class BudgetsScreen extends StatefulWidget {
+  @override
+  _BudgetsScreenState createState() => _BudgetsScreenState();
+}
 
-class BudgetsScreen extends StatelessWidget {
+class _BudgetsScreenState extends State<BudgetsScreen> {
+  List<dynamic> budgets = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchBudgets();
+  }
+
+  Future<void> fetchBudgets() async {
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    try {
+      final fetchedBudgets = await ApiService().getBudgets(userId);
+      setState(() {
+        budgets = fetchedBudgets;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load budgets. Please try again.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,40 +76,47 @@ class BudgetsScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 16.0),
-            BudgetItem(
-              category: 'Groceries',
-              allocated: 'GHS 200.00',
-              spent: 'GHS 150.00',
-              progress: 75,
-            ),
-            BudgetItem(
-              category: 'Restaurants',
-              allocated: 'GHS 100.00',
-              spent: 'GHS 80.00',
-              progress: 80,
-            ),
-            BudgetItem(
-              category: 'Utilities',
-              allocated: 'GHS 50.00',
-              spent: 'GHS 30.00',
-              progress: 60,
-            ),
-            BudgetItem(
-              category: 'Entertainment',
-              allocated: 'GHS 150.00',
-              spent: 'GHS 100.00',
-              progress: 70,
-            ),
+            isLoading
+                ? Center(child: CircularProgressIndicator())
+                : Expanded(
+                    child: ListView.builder(
+                      itemCount: budgets.length,
+                      itemBuilder: (context, index) {
+                        final budget = budgets[index];
+                        final allocated = double.tryParse(budget['amount']?.toString() ?? '0') ?? 0.0;
+                        final spent = double.tryParse(budget['spent']?.toString() ?? '0') ?? 0.0;
+                        final progress = allocated != 0 ? (spent / allocated * 100).toInt() : 0;
+
+                        return BudgetItem(
+                          category: budget['category_name'],
+                          allocated: 'GHS $allocated',
+                          spent: 'GHS $spent',
+                          progress: progress,
+                        );
+                      },
+                    ),
+                  ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.teal,
         onPressed: () {
-          // Implement add budget logic
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => CreateBudgetScreen()),
+          ).then((_) {
+            fetchBudgets(); // Refresh the list after setting a new budget
+          });
         },
-        icon: Icon(Icons.add),
-        label: Text('Set New Budget'),
+        icon: Icon(
+          Icons.add,
+          color: Color.fromRGBO(255, 255, 255, 1),
+        ),
+        label: Text(
+          'Set New Budget',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
     );
   }

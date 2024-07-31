@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
+import 'providers/user_provider.dart';
 
-void main() => runApp(MyApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure the binding is initialized
+  runApp(MyApp());
+}
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,  // Remove the debug banner
-      home: SplashScreen(),
+    return ChangeNotifierProvider(
+      create: (context) => UserProvider(0, '', '', ''),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false, // Remove the debug banner
+        home: SplashScreen(),
+      ),
     );
   }
 }
@@ -24,7 +32,8 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Timer(Duration(seconds: 3), () {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (context) => LoginScreen()));
     });
   }
 

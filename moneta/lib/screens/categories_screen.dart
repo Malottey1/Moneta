@@ -1,7 +1,43 @@
 import 'package:flutter/material.dart';
-import '../widgets/category_item.dart';  // Ensure the correct relative path
+import 'package:moneta/services/api_service.dart';
+import 'package:provider/provider.dart';
+import 'package:moneta/providers/user_provider.dart';
+import '../widgets/category_item.dart';
+import 'category_details.dart';
 
-class CategoriesScreen extends StatelessWidget {
+class CategoriesScreen extends StatefulWidget {
+  @override
+  _CategoriesScreenState createState() => _CategoriesScreenState();
+}
+
+class _CategoriesScreenState extends State<CategoriesScreen> {
+  List<dynamic> categories = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchCategories();
+  }
+
+  Future<void> fetchCategories() async {
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    try {
+      final fetchedCategories = await ApiService().getUserCategories(userId);
+      setState(() {
+        categories = fetchedCategories;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load categories. Please try again.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,76 +69,76 @@ class CategoriesScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search categories',
-                  border: InputBorder.none,
-                  prefixIcon: Icon(Icons.search, color: Colors.black),
-                  contentPadding: EdgeInsets.all(16.0),
+      body: RefreshIndicator(
+        onRefresh: fetchCategories,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search categories',
+                    border: InputBorder.none,
+                    prefixIcon: Icon(Icons.search, color: Colors.black),
+                    contentPadding: EdgeInsets.all(16.0),
+                  ),
+                  onChanged: (value) {
+                    // Implement search logic
+                  },
                 ),
               ),
-            ),
-            SizedBox(height: 16.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildFilterChip('All'),
-                _buildFilterChip('Active'),
-                _buildFilterChip('Hidden'),
-                _buildFilterChip('Inactive'),
-              ],
-            ),
-            SizedBox(height: 16.0),
-            Expanded(
-              child: ListView(
+              SizedBox(height: 16.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  CategoryItem(
-                    category: 'Home',
-                    amount: '\$2,000.00 from 8 expenses',
-                    total: '\$6,000',
-                  ),
-                  CategoryItem(
-                    category: 'Utilities',
-                    amount: '\$1,500.00 from 3 expenses',
-                    total: '\$4,500',
-                  ),
-                  CategoryItem(
-                    category: 'Groceries',
-                    amount: '\$1,500.00 from 5 expenses',
-                    total: '\$4,500',
-                  ),
-                  CategoryItem(
-                    category: 'Restaurants',
-                    amount: '\$1,500.00 from 5 expenses',
-                    total: '\$4,500',
-                  ),
+                  _buildFilterChip('All'),
+                  _buildFilterChip('Active'),
+                  _buildFilterChip('Inactive'),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.teal,
-        onPressed: () {
-          // Implement add category logic
-        },
-        icon: Icon(Icons.add),
-        label: Text(
-          'Add a category',
-          style: TextStyle(
-            fontFamily: 'SpaceGrotesk',
-            fontWeight: FontWeight.bold,
+              SizedBox(height: 16.0),
+              isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : Expanded(
+                      child: ListView.builder(
+                        itemCount: categories.length,
+                        itemBuilder: (context, index) {
+                          final category = categories[index];
+                          final budget = category['budget'] ?? 1; // Avoid division by zero
+                          final spent = category['total_spent'] ?? 0;
+                          final spentPercentage = (spent / budget) * 100;
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CategoryDetailsScreen(
+                                    category: category['category_name'],
+                                    budget: 'GHS ${category['budget']}',
+                                    spent: 'GHS ${category['total_spent']}',
+                                    spentPercentage: spentPercentage,
+                                    transactions: [], // Fetch and pass transactions related to the category
+                                  ),
+                                ),
+                              );
+                            },
+                            child: CategoryItem(
+                              category: category['category_name'],
+                              amount: 'GHS ${category['total_amount']} from ${category['expense_count']} expenses',
+                              total: 'GHS ${category['total_amount']}',
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+            ],
           ),
         ),
       ),

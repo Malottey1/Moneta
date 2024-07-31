@@ -14,61 +14,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: <Widget>[
-          SizedBox(height: 150),
-          Expanded(
-            child: PageView(
-              controller: _controller.pageController,
-              onPageChanged: (int page) {
-                setState(() {
-                  _controller.onPageChanged(page);
-                });
-              },
-              children: <Widget>[
-                SignUpPage(
-                  title: 'Welcome, Sign Up Here',
-                  subtitle: 'Already Have An Account, Log in',
-                  fields: [
-                    'First Name',
-                    'Last Name',
-                    'Email Address',
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: <Widget>[
+              SizedBox(height: 150),
+              SizedBox(
+                height: MediaQuery.of(context).size.height - 200,
+                child: PageView(
+                  controller: _controller.pageController,
+                  onPageChanged: (int page) {
+                    setState(() {
+                      _controller.onPageChanged(page);
+                    });
+                  },
+                  children: <Widget>[
+                                        SignUpPage(
+                      title: 'Welcome, Sign Up Here',
+                      subtitle: 'Already Have An Account, Log in',
+                      fields: [
+                        'First Name',
+                        'Last Name',
+                        'Email Address',
+                      ],
+                      buttonText: 'Next',
+                      controller: _controller,
+                    ),
+                    SignUpPage(
+                      title: 'Set Up A Password',
+                      fields: [
+                        'Password',
+                        'Confirm Password',
+                      ],
+                      buttonText: 'Next',
+                      controller: _controller,
+                    ),
+                    SignUpPage(
+                      title: 'Additional Information',
+                      fields: [
+                        'Gender',
+                        'Date Of Birth',
+                      ],
+                      buttonText: 'Next',
+                      controller: _controller,
+                    ),
+                    ProfilePicturePage(
+                      title: 'Set Up Your Profile Picture',
+                      firstName: _controller.firstName,
+                      controller: _controller,
+                    ),
                   ],
-                  buttonText: 'Next',
-                  controller: _controller,
                 ),
-                SignUpPage(
-                  title: 'Set Up A Password',
-                  fields: [
-                    'Password',
-                    'Confirm Password',
-                  ],
-                  buttonText: 'Next',
-                  controller: _controller,
-                ),
-                SignUpPage(
-                  title: 'Additional Information',
-                  fields: [
-                    'Gender',
-                    'Date Of Birth',
-                  ],
-                  buttonText: 'Next',
-                  controller: _controller,
-                ),
-                ProfilePicturePage(
-                  title: 'Set Up Your Profile Picture',
-                  firstName: _controller.firstName,
-                  controller: _controller,
-                ),
-              ],
-            ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(4, (index) => buildRectangleIndicator(index)),
+              ),
+              SizedBox(height: 20),
+            ],
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(4, (index) => buildRectangleIndicator(index)),
-          ),
-          SizedBox(height: 20),
-        ],
+        ),
       ),
     );
   }

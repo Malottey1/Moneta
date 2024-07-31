@@ -1,8 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:moneta/screens/expense_details.dart';
+import 'package:provider/provider.dart';
+import 'package:moneta/services/api_service.dart';
+import 'package:moneta/providers/user_provider.dart';
 import 'package:moneta/screens/expense_logging_screen.dart';
 import '../widgets/expense.dart';
 
-class ExpenseScreen extends StatelessWidget {
+class ExpenseScreen extends StatefulWidget {
+  @override
+  _ExpenseScreenState createState() => _ExpenseScreenState();
+}
+
+class _ExpenseScreenState extends State<ExpenseScreen> {
+  List<dynamic> expenses = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchExpenses();
+  }
+
+  Future<void> fetchExpenses() async {
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    try {
+      final fetchedExpenses = await ApiService().getExpenses(userId);
+      setState(() {
+        expenses = fetchedExpenses;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load expenses. Please try again.')),
+      );
+    }
+  }
+
+  void _filterExpenses(String filter) {
+    setState(() {
+      if (filter == 'Newest') {
+        expenses.sort((a, b) => DateTime.parse(b['date']).compareTo(DateTime.parse(a['date'])));
+      } else if (filter == 'Oldest') {
+        expenses.sort((a, b) => DateTime.parse(a['date']).compareTo(DateTime.parse(b['date'])));
+      } else if (filter == 'Highest') {
+        expenses.sort((a, b) => b['amount'].compareTo(a['amount']));
+      } else if (filter == 'Lowest') {
+        expenses.sort((a, b) => a['amount'].compareTo(b['amount']));
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,6 +93,9 @@ class ExpenseScreen extends StatelessWidget {
                   suffixIcon: Icon(Icons.search, color: Colors.black),
                   contentPadding: EdgeInsets.all(16.0),
                 ),
+                onChanged: (value) {
+                  // Implement search logic
+                },
               ),
             ),
             SizedBox(height: 16.0),
@@ -52,48 +105,63 @@ class ExpenseScreen extends StatelessWidget {
                 FilterChip(
                   label: Text('Newest'),
                   onSelected: (selected) {
-                    // Implement filter logic
+                    _filterExpenses('Newest');
                   },
                 ),
                 FilterChip(
                   label: Text('Oldest'),
                   onSelected: (selected) {
-                    // Implement filter logic
+                    _filterExpenses('Oldest');
                   },
                 ),
                 FilterChip(
                   label: Text('Highest'),
                   onSelected: (selected) {
-                    // Implement filter logic
+                    _filterExpenses('Highest');
                   },
                 ),
                 FilterChip(
                   label: Text('Lowest'),
                   onSelected: (selected) {
-                    // Implement filter logic
+                    _filterExpenses('Lowest');
                   },
                 ),
               ],
             ),
             SizedBox(height: 16.0),
-            Expanded(
-              child: ListView(
-                children: [
-                  ExpenseItem(
-                    category: 'Food',
-                    description: 'Lunch at cafe',
-                    amount: 'GHS 17.90',
-                    date: '22-07-2024',
+            isLoading
+                ? Center(child: CircularProgressIndicator())
+                : Expanded(
+                    child: ListView.builder(
+                      itemCount: expenses.length,
+                      itemBuilder: (context, index) {
+                        final expense = expenses[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ExpenseDetailsScreen(
+                                  id: expense['expense_id'].toString(),
+                                  category: expense['category_name'],
+                                  description: expense['description'],
+                                  amount: 'GHS ${expense['amount']}',
+                                  date: expense['date'],
+                                  receiptImageUrl: 'http://192.168.102.97/api/moneta/receipts/${expense['receipt_image']}', // Assuming this is the path structure
+                                ),
+                              ),
+                            );
+                          },
+                          child: ExpenseItem(
+                            category: expense['category_name'],
+                            description: expense['description'],
+                            amount: 'GHS ${expense['amount']}',
+                            date: expense['date'],
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  ExpenseItem(
-                    category: 'Travel',
-                    description: 'Taxi fare',
-                    amount: 'GHS 17.90',
-                    date: '22-07-2024',
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -103,7 +171,9 @@ class ExpenseScreen extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => ExpenseLoggingScreen()),
-          );
+          ).then((_) {
+            fetchExpenses(); // Refresh the list after logging a new expense
+          });
         },
         child: Icon(Icons.add),
       ),

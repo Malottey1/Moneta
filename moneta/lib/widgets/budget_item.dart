@@ -20,14 +20,27 @@ class BudgetItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            category,
-            style: TextStyle(
-              fontFamily: 'SpaceGrotesk',
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
+          Row(
+            children: [
+              Text(
+                category,
+                style: TextStyle(
+                  fontFamily: 'SpaceGrotesk',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              if (progress > 100)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4.0),
+                  child: Icon(
+                    Icons.error,
+                    color: Colors.red,
+                    size: 16,
+                  ),
+                ),
+            ],
           ),
           SizedBox(height: 4.0),
           Text(
@@ -50,12 +63,12 @@ class BudgetItem extends StatelessWidget {
               ),
               SizedBox(width: 8.0),
               Text(
-                '$progress',
+                '$progress%',
                 style: TextStyle(
                   fontFamily: 'SpaceGrotesk',
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: progress > 100 ? Colors.black : Colors.teal,
                 ),
               ),
             ],

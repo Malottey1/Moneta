@@ -51,7 +51,7 @@ class RegisterController {
       return;
     }
 
-    final Uri registerUrl = Uri.parse('http://192.168.102.97/api/moneta/register.php');
+    final Uri registerUrl = Uri.parse('https://moneta.icu/api/register.php');
     final request = http.MultipartRequest('POST', registerUrl);
 
     request.fields['first_name'] = firstName;

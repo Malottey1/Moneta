@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'expense_edit.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:provider/provider.dart';
+import 'package:moneta/services/api_service.dart';
+import 'package:moneta/providers/user_provider.dart';
 
 class ExpenseDetailsScreen extends StatefulWidget {
   final String id;
@@ -26,6 +27,7 @@ class ExpenseDetailsScreen extends StatefulWidget {
 
 class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
   late Future<void> _expenseDetailsFuture;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -37,24 +39,35 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
     // Fetch the expense details from your API or database
   }
 
-  Future<void> deleteExpense(BuildContext context) async {
-    final response = await http.post(
-      Uri.parse('http://192.168.102.97/api/moneta/delete_expense.php'),
-      body: {
-        'expense_id': widget.id,
-      },
-    );
+  Future<void> _deleteExpense(BuildContext context) async {
+    setState(() {
+      _isLoading = true;
+    });
 
-    final responseData = json.decode(response.body);
-    if (responseData['status'] == 'success') {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userId = userProvider.userId.toString();
+
+    try {
+      final response = await ApiService().deleteExpense(widget.id, userId);
+
+      if (response['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Expense deleted successfully.')),
+        );
+        Navigator.pop(context, true); // Indicate that the expense was deleted
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'])),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Expense deleted successfully.')),
+        SnackBar(content: Text('Failed to delete expense. Please try again.')),
       );
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete expense.')),
-      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -162,32 +175,44 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
                     ),
                   ),
                   SizedBox(height: 16.0),
-                  if (widget.receiptImageUrl.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Receipt',
-                          style: TextStyle(
-                            fontFamily: 'SpaceGrotesk',
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Receipt',
+                        style: TextStyle(
+                          fontFamily: 'SpaceGrotesk',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(height: 8.0),
-                        Center(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10.0),
-                            child: Image.network(
-                              widget.receiptImageUrl,
-                              height: 300, // Made the receipt image bigger
-                              fit: BoxFit.cover,
-                            ),
-                          ),
+                      ),
+                      SizedBox(height: 8.0),
+                      Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10.0),
+                          child: widget.receiptImageUrl.isNotEmpty
+                              ? Image.network(
+                                  widget.receiptImageUrl,
+                                  height: 300,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'assets/images/receipt_placeholder.png',
+                                      height: 300,
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                )
+                              : Image.asset(
+                                  'assets/images/receipt_placeholder.png',
+                                  height: 300,
+                                  fit: BoxFit.cover,
+                                ),
                         ),
-                      ],
-                    ),
-                  SizedBox(height: 8.0), // Made the space between the receipt and the edit button smaller
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8.0),
                   Center(
                     child: ElevatedButton(
                       onPressed: () async {
@@ -211,7 +236,7 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
-                        padding: EdgeInsets.symmetric(horizontal: 60, vertical: 10), // Made the button width longer and height smaller
+                        padding: EdgeInsets.symmetric(horizontal: 60, vertical: 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10.0),
                         ),
@@ -222,7 +247,7 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
                           fontFamily: 'SpaceGrotesk',
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white, // Made the text color white
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -231,7 +256,7 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
                   Center(
                     child: TextButton(
                       onPressed: () {
-                        deleteExpense(context);
+                        _deleteExpense(context);
                       },
                       child: Text(
                         'Delete expense',
@@ -239,7 +264,7 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
                           fontFamily: 'SpaceGrotesk',
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black, // Made the text color black
+                          color: Colors.black,
                         ),
                       ),
                     ),

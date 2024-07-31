@@ -12,7 +12,9 @@ class CategoriesScreen extends StatefulWidget {
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
   List<dynamic> categories = [];
+  List<dynamic> filteredCategories = [];
   bool isLoading = true;
+  String selectedFilter = 'all';
 
   @override
   void initState() {
@@ -26,6 +28,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       final fetchedCategories = await ApiService().getUserCategories(userId);
       setState(() {
         categories = fetchedCategories;
+        filteredCategories = fetchedCategories;
         isLoading = false;
       });
     } catch (e) {
@@ -36,6 +39,29 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         SnackBar(content: Text('Failed to load categories. Please try again.')),
       );
     }
+  }
+
+  void _filterCategories(String filter) {
+    setState(() {
+      selectedFilter = filter;
+      if (filter == 'all') {
+        filteredCategories = categories;
+      } else if (filter == 'active') {
+        filteredCategories = categories.where((category) => category['expense_count'] > 0).toList();
+      } else if (filter == 'inactive') {
+        filteredCategories = categories.where((category) => category['expense_count'] == 0).toList();
+      }
+    });
+  }
+
+  void _searchCategories(String query) {
+    setState(() {
+      filteredCategories = categories.where((category) {
+        final categoryName = category['category_name'].toLowerCase();
+        final searchLower = query.toLowerCase();
+        return categoryName.contains(searchLower);
+      }).toList();
+    });
   }
 
   @override
@@ -62,7 +88,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.more_vert, color: Colors.black),
+            icon: Icon(Icons.more_vert, color: Colors.grey[200]),
             onPressed: () {
               // Implement your logic here
             },
@@ -88,18 +114,16 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                     prefixIcon: Icon(Icons.search, color: Colors.black),
                     contentPadding: EdgeInsets.all(16.0),
                   ),
-                  onChanged: (value) {
-                    // Implement search logic
-                  },
+                  onChanged: _searchCategories,
                 ),
               ),
               SizedBox(height: 16.0),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildFilterChip('All'),
-                  _buildFilterChip('Active'),
-                  _buildFilterChip('Inactive'),
+                  _buildFilterChip('All', 'all'),
+                  _buildFilterChip('Active', 'active'),
+                  _buildFilterChip('Inactive', 'inactive'),
                 ],
               ),
               SizedBox(height: 16.0),
@@ -107,12 +131,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   ? Center(child: CircularProgressIndicator())
                   : Expanded(
                       child: ListView.builder(
-                        itemCount: categories.length,
+                        itemCount: filteredCategories.length,
                         itemBuilder: (context, index) {
-                          final category = categories[index];
-                          final budget = category['budget'] ?? 1; // Avoid division by zero
-                          final spent = category['total_spent'] ?? 0;
-                          final spentPercentage = (spent / budget) * 100;
+                          final category = filteredCategories[index];
+                          final totalAmount = num.tryParse(category['total_amount']?.toString() ?? '0') ?? 0;
+                          final expenseCount = num.tryParse(category['expense_count']?.toString() ?? '0') ?? 0;
+                          final spentPercentage = totalAmount != 0 ? (expenseCount / totalAmount) * 100 : 0;
 
                           return GestureDetector(
                             onTap: () {
@@ -121,9 +145,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                 MaterialPageRoute(
                                   builder: (context) => CategoryDetailsScreen(
                                     category: category['category_name'],
-                                    budget: 'GHS ${category['budget']}',
-                                    spent: 'GHS ${category['total_spent']}',
-                                    spentPercentage: spentPercentage,
+                                    budget: 'GHS $totalAmount',
+                                    spent: 'GHS $expenseCount',
+                                    spentPercentage: 1,
                                     transactions: [], // Fetch and pass transactions related to the category
                                   ),
                                 ),
@@ -131,8 +155,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                             },
                             child: CategoryItem(
                               category: category['category_name'],
-                              amount: 'GHS ${category['total_amount']} from ${category['expense_count']} expenses',
-                              total: 'GHS ${category['total_amount']}',
+                              amount: 'GHS $totalAmount from $expenseCount expenses',
+                              total: 'GHS $totalAmount',
                             ),
                           );
                         },
@@ -145,19 +169,19 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label) {
+  Widget _buildFilterChip(String label, String filter) {
     return FilterChip(
       label: Text(label),
       onSelected: (selected) {
-        // Implement filter logic
+        _filterCategories(filter);
       },
       backgroundColor: Colors.white,
       selectedColor: Colors.teal,
       checkmarkColor: Colors.white,
-      selected: label == 'All', // Default selected filter chip
+      selected: selectedFilter == filter, // Check if the current filter is selected
       labelStyle: TextStyle(
         fontFamily: 'SpaceGrotesk',
-        color: label == 'All' ? Colors.white : Colors.black,
+        color: selectedFilter == filter ? Colors.white : Colors.black,
       ),
     );
   }

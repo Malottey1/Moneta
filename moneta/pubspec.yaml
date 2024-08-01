@@ -10,10 +10,21 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
-  image_picker: ^0.8.4
+  image_picker: ^0.8.4+4
   url_launcher: ^6.0.20
-  shared_preferences: ^2.0.6
+  shared_preferences: ^2.0.13
   flutter_local_notifications: ^9.1.4
+  intl: ^0.17.0
+  provider: ^6.0.3
+  logger: ^1.1.0
+  pdf: ^3.3.0
+  syncfusion_flutter_charts: ^20.4.45
+  printing: ^5.6.1
+  syncfusion_flutter_pdf: ^20.4.54
+  charts_flutter: ^0.12.0
+  path_provider: ^2.0.11
+  sqflite: ^2.0.0+4
+  flutter_email_sender: ^5.0.2
 
     
 
@@ -36,6 +47,7 @@ flutter:
     - assets/images/on-boarding-screen-second.png
     - assets/images/on-boarding-screen-third.png
     - assets/images/on-boarding-screen-fourth.png
+    - assets/images/receipt_placeholder.png
   fonts:
     - family: SpaceGrotesk
       fonts:

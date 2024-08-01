@@ -1,7 +1,9 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:moneta/services/api_service.dart';
+import 'package:provider/provider.dart';
+import 'package:moneta/providers/user_provider.dart';
 
 class ExpenseLoggingScreen extends StatefulWidget {
   @override
@@ -14,6 +16,31 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
   final TextEditingController amountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   XFile? receiptImage;
+  bool _isLoading = false;
+  List<String> categories = ['Select a category'];
+
+  String? amountError;
+  String? dateError;
+  String? descriptionError;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final fetchedCategories = await ApiService().getCategories();
+      setState(() {
+        categories.addAll(fetchedCategories);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch categories. Please try again.')),
+      );
+    }
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     final ImagePicker _picker = ImagePicker();
@@ -23,6 +50,92 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
         receiptImage = pickedImage;
       });
     }
+  }
+
+  void _logExpense() async {
+    if (!_validateInputs()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userId = userProvider.userId;
+
+    try {
+      final response = await ApiService().logExpense(
+        userId,
+        categories.indexOf(selectedCategory),
+        double.parse(amountController.text),
+        selectedDate.toIso8601String(),
+        descriptionController.text,
+        receiptImage != null ? File(receiptImage!.path) : null,
+      );
+
+      if (response['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Expense logged successfully')),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'])),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to log expense. Please try again.')),
+      );
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  bool _validateInputs() {
+    bool isValid = true;
+
+    // Validate Amount
+    setState(() {
+      amountError = null;
+      if (amountController.text.isEmpty) {
+        amountError = 'Amount is required';
+        isValid = false;
+      } else if (double.tryParse(amountController.text) == null) {
+        amountError = 'Amount must be a numeric value';
+        isValid = false;
+      } else if (double.parse(amountController.text) <= 0) {
+        amountError = 'Amount must be greater than zero';
+        isValid = false;
+      } else if (amountController.text.contains('.') &&
+          amountController.text.split('.')[1].length > 2) {
+        amountError = 'Amount cannot have more than two decimal places';
+        isValid = false;
+      }
+    });
+
+    // Validate Date
+    setState(() {
+      dateError = null;
+      if (selectedDate.isAfter(DateTime.now())) {
+        dateError = 'Date cannot be in the future';
+        isValid = false;
+      }
+    });
+
+    // Validate Description
+    setState(() {
+      descriptionError = null;
+      if (descriptionController.text.length > 23) {
+        descriptionError = 'Description cannot exceed 23 characters';
+        isValid = false;
+      }
+    });
+
+    return isValid;
   }
 
   @override
@@ -48,7 +161,7 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
         ),
         centerTitle: true,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,12 +171,13 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
               controller: amountController,
               hintText: 'GHS 0.00',
               keyboardType: TextInputType.number,
+              errorText: amountError,
             ),
             SizedBox(height: 16.0),
             _buildDropdown(
               label: 'Category',
               value: selectedCategory,
-              items: ['Select a category', 'Food', 'Travel', 'Utilities', 'Groceries', 'Restaurants'],
+              items: categories,
               onChanged: (String? newValue) {
                 setState(() {
                   selectedCategory = newValue!;
@@ -79,12 +193,14 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
                   selectedDate = newDate;
                 });
               },
+              errorText: dateError,
             ),
             SizedBox(height: 16.0),
             _buildTextField(
               label: 'Description',
               controller: descriptionController,
               hintText: 'Add a note',
+              errorText: descriptionError,
             ),
             SizedBox(height: 16.0),
             Row(
@@ -98,18 +214,20 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   ),
-                  onPressed: () {
-                    // Implement save logic
-                  },
-                  child: Text(
-                    'Save',
-                    style: TextStyle(
-                      fontFamily: 'SpaceGrotesk',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  onPressed: _isLoading ? null : _logExpense,
+                  child: _isLoading
+                      ? CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : Text(
+                          'Save',
+                          style: TextStyle(
+                            fontFamily: 'SpaceGrotesk',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
@@ -180,7 +298,13 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
     );
   }
 
-  Widget _buildTextField({required String label, required TextEditingController controller, String? hintText, TextInputType? keyboardType}) {
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    String? hintText,
+    TextInputType? keyboardType,
+    String? errorText,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -198,11 +322,12 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hintText,
+            errorText: errorText,
             filled: true,
             fillColor: Colors.grey[200],
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10.0),
-              borderSide: BorderSide.none,
+                           borderSide: BorderSide.none,
             ),
             contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           ),
@@ -211,7 +336,12 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
     );
   }
 
-  Widget _buildDropdown({required String label, required String value, required List<String> items, required ValueChanged<String?> onChanged}) {
+  Widget _buildDropdown({
+    required String label,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -254,7 +384,12 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
     );
   }
 
-  Widget _buildDatePicker({required String label, required DateTime selectedDate, required ValueChanged<DateTime> onDateChanged}) {
+  Widget _buildDatePicker({
+    required String label,
+    required DateTime selectedDate,
+    required ValueChanged<DateTime> onDateChanged,
+    String? errorText,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -273,7 +408,7 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
               context: context,
               initialDate: selectedDate,
               firstDate: DateTime(2000),
-              lastDate: DateTime(2100),
+              lastDate: DateTime.now(),
             );
             if (pickedDate != null && pickedDate != selectedDate) {
               onDateChanged(pickedDate);
@@ -300,6 +435,17 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
             ),
           ),
         ),
+        if (errorText != null) ...[
+          SizedBox(height: 8.0),
+          Text(
+            errorText,
+            style: TextStyle(
+              fontFamily: 'SpaceGrotesk',
+              fontSize: 14,
+              color: Colors.red,
+            ),
+          ),
+        ],
       ],
     );
   }

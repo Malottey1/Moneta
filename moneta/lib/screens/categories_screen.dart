@@ -1,7 +1,69 @@
 import 'package:flutter/material.dart';
-import '../widgets/category_item.dart';  // Ensure the correct relative path
+import 'package:moneta/services/api_service.dart';
+import 'package:provider/provider.dart';
+import 'package:moneta/providers/user_provider.dart';
+import '../widgets/category_item.dart';
+import 'category_details.dart';
 
-class CategoriesScreen extends StatelessWidget {
+class CategoriesScreen extends StatefulWidget {
+  @override
+  _CategoriesScreenState createState() => _CategoriesScreenState();
+}
+
+class _CategoriesScreenState extends State<CategoriesScreen> {
+  List<dynamic> categories = [];
+  List<dynamic> filteredCategories = [];
+  bool isLoading = true;
+  String selectedFilter = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    fetchCategories();
+  }
+
+  Future<void> fetchCategories() async {
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    try {
+      final fetchedCategories = await ApiService().getUserCategories(userId);
+      setState(() {
+        categories = fetchedCategories;
+        filteredCategories = fetchedCategories;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load categories. Please try again.')),
+      );
+    }
+  }
+
+  void _filterCategories(String filter) {
+    setState(() {
+      selectedFilter = filter;
+      if (filter == 'all') {
+        filteredCategories = categories;
+      } else if (filter == 'active') {
+        filteredCategories = categories.where((category) => category['expense_count'] > 0).toList();
+      } else if (filter == 'inactive') {
+        filteredCategories = categories.where((category) => category['expense_count'] == 0).toList();
+      }
+    });
+  }
+
+  void _searchCategories(String query) {
+    setState(() {
+      filteredCategories = categories.where((category) {
+        final categoryName = category['category_name'].toLowerCase();
+        final searchLower = query.toLowerCase();
+        return categoryName.contains(searchLower);
+      }).toList();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,102 +88,100 @@ class CategoriesScreen extends StatelessWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.more_vert, color: Colors.black),
+            icon: Icon(Icons.more_vert, color: Colors.grey[200]),
             onPressed: () {
               // Implement your logic here
             },
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search categories',
-                  border: InputBorder.none,
-                  prefixIcon: Icon(Icons.search, color: Colors.black),
-                  contentPadding: EdgeInsets.all(16.0),
+      body: RefreshIndicator(
+        onRefresh: fetchCategories,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search categories',
+                    border: InputBorder.none,
+                    prefixIcon: Icon(Icons.search, color: Colors.black),
+                    contentPadding: EdgeInsets.all(16.0),
+                  ),
+                  onChanged: _searchCategories,
                 ),
               ),
-            ),
-            SizedBox(height: 16.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildFilterChip('All'),
-                _buildFilterChip('Active'),
-                _buildFilterChip('Hidden'),
-                _buildFilterChip('Inactive'),
-              ],
-            ),
-            SizedBox(height: 16.0),
-            Expanded(
-              child: ListView(
+              SizedBox(height: 16.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  CategoryItem(
-                    category: 'Home',
-                    amount: '\$2,000.00 from 8 expenses',
-                    total: '\$6,000',
-                  ),
-                  CategoryItem(
-                    category: 'Utilities',
-                    amount: '\$1,500.00 from 3 expenses',
-                    total: '\$4,500',
-                  ),
-                  CategoryItem(
-                    category: 'Groceries',
-                    amount: '\$1,500.00 from 5 expenses',
-                    total: '\$4,500',
-                  ),
-                  CategoryItem(
-                    category: 'Restaurants',
-                    amount: '\$1,500.00 from 5 expenses',
-                    total: '\$4,500',
-                  ),
+                  _buildFilterChip('All', 'all'),
+                  _buildFilterChip('Active', 'active'),
+                  _buildFilterChip('Inactive', 'inactive'),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.teal,
-        onPressed: () {
-          // Implement add category logic
-        },
-        icon: Icon(Icons.add),
-        label: Text(
-          'Add a category',
-          style: TextStyle(
-            fontFamily: 'SpaceGrotesk',
-            fontWeight: FontWeight.bold,
+              SizedBox(height: 16.0),
+              isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : Expanded(
+                      child: ListView.builder(
+                        itemCount: filteredCategories.length,
+                        itemBuilder: (context, index) {
+                          final category = filteredCategories[index];
+                          final totalAmount = num.tryParse(category['total_amount']?.toString() ?? '0') ?? 0;
+                          final expenseCount = num.tryParse(category['expense_count']?.toString() ?? '0') ?? 0;
+                          final spentPercentage = totalAmount != 0 ? (expenseCount / totalAmount) * 100 : 0;
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CategoryDetailsScreen(
+                                    category: category['category_name'],
+                                    budget: 'GHS $totalAmount',
+                                    spent: 'GHS $expenseCount',
+                                    spentPercentage: 1,
+                                    transactions: [], // Fetch and pass transactions related to the category
+                                  ),
+                                ),
+                              );
+                            },
+                            child: CategoryItem(
+                              category: category['category_name'],
+                              amount: 'GHS $totalAmount from $expenseCount expenses',
+                              total: 'GHS $totalAmount',
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildFilterChip(String label) {
+  Widget _buildFilterChip(String label, String filter) {
     return FilterChip(
       label: Text(label),
       onSelected: (selected) {
-        // Implement filter logic
+        _filterCategories(filter);
       },
       backgroundColor: Colors.white,
       selectedColor: Colors.teal,
       checkmarkColor: Colors.white,
-      selected: label == 'All', // Default selected filter chip
+      selected: selectedFilter == filter, // Check if the current filter is selected
       labelStyle: TextStyle(
         fontFamily: 'SpaceGrotesk',
-        color: label == 'All' ? Colors.white : Colors.black,
+        color: selectedFilter == filter ? Colors.white : Colors.black,
       ),
     );
   }

@@ -4,9 +4,9 @@ class BudgetItem extends StatelessWidget {
   final String category;
   final String allocated;
   final String spent;
-  final double progress;
+  final int progress;
 
-  BudgetItem({
+  const BudgetItem({
     required this.category,
     required this.allocated,
     required this.spent,
@@ -20,29 +20,58 @@ class BudgetItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            category,
-            style: TextStyle(
-              fontFamily: 'SpaceGrotesk',
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
+          Row(
+            children: [
+              Text(
+                category,
+                style: TextStyle(
+                  fontFamily: 'SpaceGrotesk',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              if (progress > 100)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4.0),
+                  child: Icon(
+                    Icons.error,
+                    color: Colors.red,
+                    size: 16,
+                  ),
+                ),
+            ],
           ),
           SizedBox(height: 4.0),
           Text(
-            'Allocated: $allocated, Spent: $spent',
+            'Allocated: $allocated, \nSpent: $spent',
             style: TextStyle(
               fontFamily: 'SpaceGrotesk',
               fontSize: 14,
-              color: Colors.black,
+              color: Colors.blueGrey,
             ),
           ),
-          SizedBox(height: 4.0),
-          LinearProgressIndicator(
-            value: progress / 100,
-            backgroundColor: Colors.grey[300],
-            color: Colors.teal,
+          SizedBox(height: 8.0),
+          Row(
+            children: [
+              Expanded(
+                child: LinearProgressIndicator(
+                  value: progress / 100,
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
+                ),
+              ),
+              SizedBox(width: 8.0),
+              Text(
+                '$progress%',
+                style: TextStyle(
+                  fontFamily: 'SpaceGrotesk',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: progress > 100 ? Colors.black : Colors.teal,
+                ),
+              ),
+            ],
           ),
         ],
       ),

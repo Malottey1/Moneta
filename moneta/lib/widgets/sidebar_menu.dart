@@ -5,7 +5,8 @@ import 'package:moneta/screens/expense_screen.dart';
 import 'package:moneta/screens/home_screen.dart';
 import 'package:moneta/screens/reports_screen.dart';
 import 'package:moneta/screens/settings_screen.dart';
-
+import 'package:provider/provider.dart';
+import 'package:moneta/providers/user_provider.dart';
 
 class SidebarMenu extends StatelessWidget {
   @override
@@ -14,40 +15,51 @@ class SidebarMenu extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: <Widget>[
-          Container(
-            padding: EdgeInsets.only(top: 100.0, left: 16, bottom: 16.0, right: 16.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+          Consumer<UserProvider>(
+            builder: (context, userProvider, child) {
+              return Container(
+                padding: EdgeInsets.only(top: 100.0, left: 16, bottom: 16.0, right: 16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Image.asset(
-                      'assets/images/moneta-logo-2.png',
-                      width: 40,
-                      height: 40,
+                    Row(
+                      children: [
+                        Image.asset(
+                          'assets/images/moneta-logo-2.png',
+                          width: 40,
+                          height: 40,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'MONETA',
+                          style: TextStyle(
+                            fontFamily: 'SpaceGrotesk',
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 8),
-                    Text(
-                      'MONETA',
-                      style: TextStyle(
-                        fontFamily: 'SpaceGrotesk',
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen()));
+                      },
+                      child: CircleAvatar(
+                        radius: 25,
+                        backgroundImage: userProvider.profilePictureUrl != null
+                            ? NetworkImage(userProvider.profilePictureUrl!)
+                            : AssetImage('assets/images/moneta-logo-2.png') as ImageProvider,
                       ),
                     ),
                   ],
                 ),
-                CircleAvatar(
-                  radius: 25,
-                  backgroundColor: Colors.grey[200],
-                  child: Icon(Icons.person, size: 25, color: Colors.teal),
-                ),
-              ],
-            ),
+              );
+            },
           ),
           _buildDrawerItem(
             icon: Icons.home,
@@ -86,7 +98,7 @@ class SidebarMenu extends StatelessWidget {
             text: 'Reports',
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (context) => ReportsScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => ExpenseReportScreen()));
             },
           ),
           _buildDrawerItem(

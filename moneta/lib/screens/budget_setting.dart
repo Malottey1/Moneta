@@ -1,6 +1,107 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:moneta/services/api_service.dart';
+import 'package:provider/provider.dart';
+import 'package:moneta/providers/user_provider.dart'; // Assuming you're using a Provider for managing user state
 
-class CreateBudgetScreen extends StatelessWidget {
+class CreateBudgetScreen extends StatefulWidget {
+  @override
+  _CreateBudgetScreenState createState() => _CreateBudgetScreenState();
+}
+
+class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
+  final ApiService apiService = ApiService();
+  final TextEditingController amountController = TextEditingController();
+  String selectedCategory = 'Select a category';
+  DateTime startDate = DateTime.now();
+  DateTime endDate = DateTime.now();
+  List<String> categories = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      categories = await apiService.getCategories();
+      categories.insert(0, 'Select a category');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch categories')),
+      );
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isStartDate ? startDate : endDate,
+      firstDate: isStartDate ? DateTime.now() : startDate,
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != (isStartDate ? startDate : endDate)) {
+      setState(() {
+        if (isStartDate) {
+          startDate = picked;
+          if (endDate.isBefore(startDate)) {
+            endDate = startDate;
+          }
+        } else {
+          endDate = picked;
+        }
+      });
+    }
+  }
+
+  Future<void> _saveBudget() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Get the current user's ID from the provider
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+
+    try {
+      final response = await apiService.saveBudget(
+        userId, // use the actual user ID from the provider
+        categories.indexOf(selectedCategory),
+        double.parse(amountController.text),
+        startDate.toIso8601String().split('T')[0],
+        endDate.toIso8601String().split('T')[0],
+      );
+
+      if (response['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Budget saved successfully')),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'])),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save budget. Please try again.')),
+      );
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,45 +133,45 @@ class CreateBudgetScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDropdownField('Category'),
-            SizedBox(height: 16.0),
-            _buildTextField('Amount'),
-            SizedBox(height: 16.0),
-            _buildDateField('Start date'),
-            SizedBox(height: 16.0),
-            _buildDateField('End date'),
-            SizedBox(height: 32.0),
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDropdownField('Category'),
+                  SizedBox(height: 16.0),
+                  _buildTextField('Amount'),
+                  SizedBox(height: 16.0),
+                  _buildDateField('Start date', true),
+                  SizedBox(height: 16.0),
+                  _buildDateField('End date', false),
+                  SizedBox(height: 32.0),
+                  Center(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: _saveBudget,
+                      child: Text(
+                        'Save',
+                        style: TextStyle(
+                          fontFamily: 'SpaceGrotesk',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                onPressed: () {
-                  // Implement save logic
-                },
-                child: Text(
-                  'Save',
-                  style: TextStyle(
-                    fontFamily: 'SpaceGrotesk',
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -85,16 +186,28 @@ class CreateBudgetScreen extends StatelessWidget {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hint,
+          hintStyle: TextStyle(
+            fontFamily: 'SpaceGrotesk',
+            fontSize: 16,
+          ),
         ),
-        items: <String>['Category 1', 'Category 2', 'Category 3', 'Category 4']
-            .map<DropdownMenuItem<String>>((String value) {
+        value: selectedCategory,
+        items: categories.map<DropdownMenuItem<String>>((String value) {
           return DropdownMenuItem<String>(
             value: value,
-            child: Text(value),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontFamily: 'SpaceGrotesk',
+                fontSize: 16,
+              ),
+            ),
           );
         }).toList(),
         onChanged: (String? newValue) {
-          // Implement your logic here
+          setState(() {
+            selectedCategory = newValue!;
+          });
         },
       ),
     );
@@ -108,16 +221,26 @@ class CreateBudgetScreen extends StatelessWidget {
       ),
       padding: EdgeInsets.symmetric(horizontal: 16.0),
       child: TextField(
+        controller: amountController,
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hint,
+          hintStyle: TextStyle(
+            fontFamily: 'SpaceGrotesk',
+            fontSize: 16,
+          ),
         ),
         keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        style: TextStyle(
+          fontFamily: 'SpaceGrotesk',
+          fontSize: 16,
+        ),
       ),
     );
   }
 
-  Widget _buildDateField(String hint) {
+  Widget _buildDateField(String hint, bool isStartDate) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[200],
@@ -128,7 +251,9 @@ class CreateBudgetScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            hint,
+            isStartDate
+                ? "${startDate.toLocal()}".split(' ')[0]
+                : "${endDate.toLocal()}".split(' ')[0],
             style: TextStyle(
               fontFamily: 'SpaceGrotesk',
               fontSize: 16,
@@ -137,9 +262,7 @@ class CreateBudgetScreen extends StatelessWidget {
           ),
           IconButton(
             icon: Icon(Icons.calendar_today, color: Colors.grey),
-            onPressed: () {
-              // Implement your logic here
-            },
+            onPressed: () => _selectDate(context, isStartDate),
           ),
         ],
       ),

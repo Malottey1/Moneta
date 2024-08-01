@@ -196,33 +196,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-Future<void> _deleteAccount() async {
-  final userProvider = Provider.of<UserProvider>(context, listen: false);
-  final int userId = userProvider.userId;
+  Future<void> _deleteAccount() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final int userId = userProvider.userId;
 
-  try {
-    print('Attempting to delete account for userId: $userId'); // Log userId
-    final response = await ApiService().deleteUserAccount(userId);
-    print('API response: $response'); // Log API response
+    try {
+      print('Attempting to delete account for userId: $userId'); // Log userId
+      final response = await ApiService().deleteUserAccount(userId);
+      print('API response: $response'); // Log API response
 
-    if (response['status'] == 'success') {
+      if (response['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Account deleted successfully.')),
+        );
+        // Navigate to login screen after account deletion
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete account: ${response['message']}')),
+        );
+      }
+    } catch (e) {
+      print('Error deleting account: $e'); // Log error
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Account deleted successfully.')),
-      );
-      // Navigate to login screen after account deletion
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete account: ${response['message']}')),
+        SnackBar(content: Text('Failed to delete account. Please try again.')),
       );
     }
-  } catch (e) {
-    print('Error deleting account: $e'); // Log error
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to delete account. Please try again.')),
-    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -290,7 +290,7 @@ Future<void> _deleteAccount() async {
                       ),
                     ],
                   ),
-                  SizedBox(height: 8.0),
+                                    SizedBox(height: 8.0),
                   Text(
                     '${userProvider.firstName} ${userProvider.lastName}',
                     style: TextStyle(
@@ -305,7 +305,8 @@ Future<void> _deleteAccount() async {
                       fontFamily: 'SpaceGrotesk',
                       fontSize: 16,
                       color: Colors.grey,
-                    ),                  ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -396,31 +397,31 @@ Future<void> _deleteAccount() async {
   }
 
   void _showDeleteAccountConfirmationDialog() {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text('Delete Account'),
-        content: Text('Are you sure you want to delete your account? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close the dialog
-            },
-            child: Text('Cancel', style: TextStyle(color: Colors.teal)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop(); // Close the dialog
-              await _deleteAccount(); // Proceed with account deletion
-            },
-            child: Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      );
-    },
-  );
-}
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Account'),
+          content: Text('Are you sure you want to delete your account? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Cancel', style: TextStyle(color: Colors.teal)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close the dialog
+                await _deleteAccount(); // Proceed with account deletion
+              },
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _showFeedbackDialog(BuildContext context, EmailController emailController) {
     showDialog(

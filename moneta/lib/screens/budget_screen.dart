@@ -94,11 +94,11 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => EditBudgetScreen(
-                                  id: budget['budget_id'].toString(),
-                                  category: budget['category_name'].toString(),
-                                  allocated: budget['amount'].toString(),
-                                  startDate: budget['start_date'].toString(),
-                                  endDate: budget['end_date'].toString(),
+                                  id: budget['budget_id']?.toString() ?? '',
+                                  category: budget['category_name']?.toString() ?? '',
+                                  allocated: budget['amount']?.toString() ?? '0',
+                                  startDate: budget['start_date']?.toString() ?? '',
+                                  endDate: budget['end_date']?.toString() ?? '',
                                 ),
                               ),
                             );
@@ -107,7 +107,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                             }
                           },
                           child: BudgetItem(
-                            category: budget['category_name'],
+                            category: budget['category_name'] ?? 'Unknown',
                             allocated: 'GHS $allocated',
                             spent: 'GHS $spent',
                             progress: progress,
@@ -135,7 +135,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
         ),
         label: Text(
           'Set New Budget',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white, fontFamily: 'SpaceGrotesk'),
         ),
       ),
     );

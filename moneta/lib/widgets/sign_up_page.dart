@@ -8,6 +8,7 @@ class SignUpPage extends StatefulWidget {
   final List<String> fields;
   final String buttonText;
   final RegisterController controller;
+  final VoidCallback? onSubtitleTap; // Added parameter
 
   SignUpPage({
     required this.title,
@@ -15,6 +16,7 @@ class SignUpPage extends StatefulWidget {
     required this.fields,
     required this.buttonText,
     required this.controller,
+    this.onSubtitleTap, // Added parameter
   });
 
   @override
@@ -67,14 +69,17 @@ class _SignUpPageState extends State<SignUpPage> {
             if (widget.subtitle != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10.0),
-                child: Text(
-                  widget.subtitle!,
-                  textAlign: TextAlign.left,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.normal,
-                    fontFamily: 'SpaceGrotesk',
-                    color: Colors.grey,
+                child: GestureDetector(
+                  onTap: widget.onSubtitleTap, // Use the new parameter
+                  child: Text(
+                    widget.subtitle!,
+                    textAlign: TextAlign.left,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.normal,
+                      fontFamily: 'SpaceGrotesk',
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ),
@@ -132,6 +137,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       },
                       decoration: InputDecoration(
                         hintText: 'Date Of Birth',
+                        errorText: widget.controller.dateOfBirthError,
                         filled: true,
                         fillColor: Colors.grey[200],
                         border: OutlineInputBorder(
@@ -146,21 +152,34 @@ class _SignUpPageState extends State<SignUpPage> {
                     padding: const EdgeInsets.symmetric(vertical: 10.0),
                     child: TextField(
                       onChanged: (value) {
-                        if (field == 'First Name') {
-                          widget.controller.firstName = value;
-                        } else if (field == 'Last Name') {
-                          widget.controller.lastName = value;
-                        } else if (field == 'Email Address') {
-                          widget.controller.email = value;
-                        } else if (field == 'Password') {
-                          widget.controller.password = value;
-                        } else if (field == 'Confirm Password') {
-                          widget.controller.confirmPassword = value;
-                        }
+                        setState(() {
+                          if (field == 'First Name') {
+                            widget.controller.firstName = value;
+                          } else if (field == 'Last Name') {
+                            widget.controller.lastName = value;
+                          } else if (field == 'Email Address') {
+                            widget.controller.email = value;
+                          } else if (field == 'Password') {
+                            widget.controller.password = value;
+                          } else if (field == 'Confirm Password') {
+                            widget.controller.confirmPassword = value;
+                          }
+                        });
                       },
                       obscureText: field.contains('Password'),
                       decoration: InputDecoration(
                         hintText: field,
+                        errorText: field == 'First Name'
+                            ? widget.controller.firstNameError
+                            : field == 'Last Name'
+                                ? widget.controller.lastNameError
+                                : field == 'Email Address'
+                                    ? widget.controller.emailError
+                                    : field == 'Password'
+                                        ? widget.controller.passwordError
+                                        : field == 'Confirm Password'
+                                            ? widget.controller.confirmPasswordError
+                                            : null,
                         filled: true,
                         fillColor: Colors.grey[200],
                         border: OutlineInputBorder(
@@ -185,10 +204,12 @@ class _SignUpPageState extends State<SignUpPage> {
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                 ),
                 onPressed: () {
-                  if (widget.controller.currentPage == 2) {
-                    widget.controller.nextPage(); // Navigate to Profile Picture Page
-                  } else {
+                  if (widget.controller.validateCurrentPage()) {
                     widget.controller.nextPage();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Please correct the errors in the form')),
+                    );
                   }
                 },
                 child: Text(

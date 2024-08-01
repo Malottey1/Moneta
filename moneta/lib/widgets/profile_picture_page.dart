@@ -131,32 +131,6 @@ class _ProfilePicturePageState extends State<ProfilePicturePage> {
                     ),
                   ),
                   SizedBox(height: 10),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: Colors.teal),
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                    ),
-                    onPressed: () async {
-                      await widget.controller.registerUser(context);
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
-                    },
-                    child: Text(
-                      'Skip',
-                      style: TextStyle(
-                        fontFamily: 'SpaceGrotesk',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

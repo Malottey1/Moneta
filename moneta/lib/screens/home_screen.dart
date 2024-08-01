@@ -36,40 +36,55 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchData() async {
-    try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final userId = userProvider.userId;
+  try {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userId = userProvider.userId;
 
-      // Fetch user name
-      userName = userProvider.firstName ?? 'User';
-      _logger.d('User name: $userName');
+    // Fetch user name
+    userName = userProvider.firstName ?? 'User';
+    _logger.d('User name: $userName');
 
-      // Fetch monthly expense
-      final monthlyExpenseResponse = await ApiService().getMonthlyExpense(userId);
-      totalMonthlyExpense = double.tryParse(monthlyExpenseResponse['total_spent'] ?? '0') ?? 0.0;
-      _logger.d('Total monthly expense: $totalMonthlyExpense');
+    // Fetch monthly expense
+    final monthlyExpenseResponse = await ApiService().getMonthlyExpense(userId);
+    _logger.d('Monthly expense response: $monthlyExpenseResponse');
+    totalMonthlyExpense = double.tryParse(monthlyExpenseResponse['total_spent'] ?? '0') ?? 0.0;
+    _logger.d('Total monthly expense: $totalMonthlyExpense');
 
-      // Fetch recent transactions
-      recentTransactions = await ApiService().getRecentTransactions(userId);
-      _logger.d('Recent transactions: $recentTransactions');
-
-      // Fetch budget summaries
-      budgetSummaries = await ApiService().getBudgetSummaries(userId);
-      _logger.d('Budget summaries: $budgetSummaries');
-
-      setState(() {
-        isLoading = false;
-      });
-    } catch (e) {
-      _logger.e('Error fetching data: $e');
-      setState(() {
-        isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('View your summary here.')),
-      );
+    // Fetch recent transactions
+    final transactionsResponse = await ApiService().getRecentTransactions(userId);
+    _logger.d('Transactions response: $transactionsResponse');
+    if (transactionsResponse is List && transactionsResponse.isNotEmpty) {
+      recentTransactions = transactionsResponse;
+    } else {
+      _logger.w('No recent transactions found');
+      recentTransactions = [];
     }
+    _logger.d('Recent transactions: $recentTransactions');
+
+    // Fetch budget summaries
+    final budgetResponse = await ApiService().getBudgetSummaries(userId);
+    _logger.d('Budget response: $budgetResponse');
+    if (budgetResponse is List && budgetResponse.isNotEmpty) {
+      budgetSummaries = budgetResponse;
+    } else {
+      _logger.w('No budget summaries found');
+      budgetSummaries = [];
+    }
+    _logger.d('Budget summaries: $budgetSummaries');
+
+    setState(() {
+      isLoading = false;
+    });
+  } catch (e) {
+    _logger.e('Error fetching data: $e');
+    setState(() {
+      isLoading = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error fetching data. Please try again later.')),
+    );
   }
+}
 
   void toggleExpenseVisibility() {
     setState(() {
@@ -256,8 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: TextStyle(
                                   fontFamily: 'SpaceGrotesk',
                                   fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,                                  color: Colors.black,
                                 ),
                               ),
                             ],
@@ -268,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   children: [
                                     ExpenseItem(
                                       date: transaction['date'] ?? '',
-                                      category: transaction['category'] ?? 'Unknown', // Ensure 'category' is used
+                                      category: transaction['category'] ?? 'Unknown',
                                       amount: 'GHS ${double.tryParse(transaction['amount']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}',
                                     ),
                                     Divider(),
@@ -331,19 +345,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: TextStyle(
                                   fontFamily: 'SpaceGrotesk',
                                   fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                            ]
+                            ],
                           ),
                           Divider(),
                           ...budgetSummaries.map((budget) => budget != null
                               ? Column(
                                   children: [
                                     BudgetSummaryItem(
-                                      category: budget['category_name'] ?? 'Unknown', // Use 'category_name'
-                                      budget: 'GHS ${double.tryParse(budget['budget']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}', // Correct key
+                                      category: budget['category_name'] ?? 'Unknown',
+                                      budget: 'GHS ${double.tryParse(budget['budget']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}',
                                       spent: 'GHS ${double.tryParse(budget['spent']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}',
                                     ),
                                     Divider(),
@@ -358,23 +372,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         ActionButton(
-                            icon: Icons.add,
-                            label: 'Add Expense',
-                            onPressed: () {
-                               Navigator.push(context, MaterialPageRoute(builder: (context) => ExpenseLoggingScreen()));
-                            }),
+                          icon: Icons.add,
+                          label: 'Add Expense',
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => ExpenseLoggingScreen()));
+                          },
+                        ),
                         ActionButton(
-                            icon: Icons.pie_chart,
-                            label: 'View Reports',
-                            onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => ExpenseReportScreen()));
-                            }),
+                          icon: Icons.pie_chart,
+                          label: 'View Reports',
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => ExpenseReportScreen()));
+                          },
+                        ),
                         ActionButton(
-                            icon: Icons.settings,
-                            label: 'Set Budgets',
-                            onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => CreateBudgetScreen()));
-                            }),
+                          icon: Icons.settings,
+                          label: 'Set Budgets',
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => CreateBudgetScreen()));
+                          },
+                        ),
                       ],
                     ),
                   ],

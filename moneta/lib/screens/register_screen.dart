@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:moneta/widgets/profile_picture_page.dart';
 import 'package:moneta/widgets/sign_up_page.dart';
 import '../controllers/register_controller.dart';
+import 'login_screen.dart'; // Import your login screen
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -18,7 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
-              SizedBox(height: 150),
+              SizedBox(height: 70),
               SizedBox(
                 height: MediaQuery.of(context).size.height - 200,
                 child: PageView(
@@ -29,15 +30,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     });
                   },
                   children: <Widget>[
-                                        SignUpPage(
+                    SignUpPage(
                       title: 'Welcome, Sign Up Here',
-                      subtitle: 'Already Have An Account, Log in',
+                      subtitle: 'Already Have An Account? Log In',
                       fields: [
                         'First Name',
                         'Last Name',
                         'Email Address',
                       ],
                       buttonText: 'Next',
+                      onSubtitleTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => LoginScreen()),
+                        );
+                      },
                       controller: _controller,
                     ),
                     SignUpPage(

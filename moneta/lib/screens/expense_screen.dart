@@ -167,21 +167,21 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ExpenseDetailsScreen(
-                                  id: expense['expense_id'].toString(),
-                                  category: expense['category_name'],
-                                  description: expense['description'],
-                                  amount: 'GHS ${expense['amount']}',
-                                  date: expense['date'],
-                                  receiptImageUrl: 'https://moneta.icu/api/receipts/${expense['receipt_image']}', // Assuming this is the path structure
+                                  id: expense['expense_id']?.toString() ?? '',
+                                  category: expense['category_name'] ?? '',
+                                  description: expense['description'] ?? '',
+                                  amount: 'GHS ${expense['amount']?.toString() ?? '0'}',
+                                  date: expense['date'] ?? '',
+                                  receiptImageUrl: 'http://192.168.102.97/api/moneta/receipts/${expense['receipt_image'] ?? ''}', // Assuming this is the path structure
                                 ),
                               ),
                             );
                           },
                           child: ExpenseItem(
-                            category: expense['category_name'],
-                            description: expense['description'],
-                            amount: 'GHS ${expense['amount']}',
-                            date: expense['date'],
+                            category: expense['category_name'] ?? 'Unknown',
+                            description: expense['description'] ?? 'No description',
+                            amount: 'GHS ${expense['amount']?.toString() ?? '0.00'}',
+                            date: expense['date'] ?? 'Unknown',
                           ),
                         );
                       },

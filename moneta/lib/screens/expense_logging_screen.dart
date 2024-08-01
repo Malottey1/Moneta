@@ -19,6 +19,10 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
   bool _isLoading = false;
   List<String> categories = ['Select a category'];
 
+  String? amountError;
+  String? dateError;
+  String? descriptionError;
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +53,10 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
   }
 
   void _logExpense() async {
+    if (!_validateInputs()) {
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -58,8 +66,8 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
 
     try {
       final response = await ApiService().logExpense(
-        userId, // Use the actual user ID from the provider
-        categories.indexOf(selectedCategory), // Using index as the ID
+        userId,
+        categories.indexOf(selectedCategory),
         double.parse(amountController.text),
         selectedDate.toIso8601String(),
         descriptionController.text,
@@ -87,6 +95,49 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
     });
   }
 
+  bool _validateInputs() {
+    bool isValid = true;
+
+    // Validate Amount
+    setState(() {
+      amountError = null;
+      if (amountController.text.isEmpty) {
+        amountError = 'Amount is required';
+        isValid = false;
+      } else if (double.tryParse(amountController.text) == null) {
+        amountError = 'Amount must be a numeric value';
+        isValid = false;
+      } else if (double.parse(amountController.text) <= 0) {
+        amountError = 'Amount must be greater than zero';
+        isValid = false;
+      } else if (amountController.text.contains('.') &&
+          amountController.text.split('.')[1].length > 2) {
+        amountError = 'Amount cannot have more than two decimal places';
+        isValid = false;
+      }
+    });
+
+    // Validate Date
+    setState(() {
+      dateError = null;
+      if (selectedDate.isAfter(DateTime.now())) {
+        dateError = 'Date cannot be in the future';
+        isValid = false;
+      }
+    });
+
+    // Validate Description
+    setState(() {
+      descriptionError = null;
+      if (descriptionController.text.length > 23) {
+        descriptionError = 'Description cannot exceed 23 characters';
+        isValid = false;
+      }
+    });
+
+    return isValid;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,7 +161,7 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
         ),
         centerTitle: true,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,6 +171,7 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
               controller: amountController,
               hintText: 'GHS 0.00',
               keyboardType: TextInputType.number,
+              errorText: amountError,
             ),
             SizedBox(height: 16.0),
             _buildDropdown(
@@ -141,12 +193,14 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
                   selectedDate = newDate;
                 });
               },
+              errorText: dateError,
             ),
             SizedBox(height: 16.0),
             _buildTextField(
               label: 'Description',
               controller: descriptionController,
               hintText: 'Add a note',
+              errorText: descriptionError,
             ),
             SizedBox(height: 16.0),
             Row(
@@ -244,7 +298,13 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
     );
   }
 
-  Widget _buildTextField({required String label, required TextEditingController controller, String? hintText, TextInputType? keyboardType}) {
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    String? hintText,
+    TextInputType? keyboardType,
+    String? errorText,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -262,11 +322,12 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hintText,
+            errorText: errorText,
             filled: true,
             fillColor: Colors.grey[200],
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10.0),
-              borderSide: BorderSide.none,
+                           borderSide: BorderSide.none,
             ),
             contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           ),
@@ -275,7 +336,12 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
     );
   }
 
-  Widget _buildDropdown({required String label, required String value, required List<String> items, required ValueChanged<String?> onChanged}) {
+  Widget _buildDropdown({
+    required String label,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -318,9 +384,14 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
     );
   }
 
-  Widget _buildDatePicker({required String label, required DateTime selectedDate, required ValueChanged<DateTime> onDateChanged}) {
+  Widget _buildDatePicker({
+    required String label,
+    required DateTime selectedDate,
+    required ValueChanged<DateTime> onDateChanged,
+    String? errorText,
+  }) {
     return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -337,7 +408,7 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
               context: context,
               initialDate: selectedDate,
               firstDate: DateTime(2000),
-              lastDate: DateTime(2100),
+              lastDate: DateTime.now(),
             );
             if (pickedDate != null && pickedDate != selectedDate) {
               onDateChanged(pickedDate);
@@ -364,6 +435,17 @@ class _ExpenseLoggingScreenState extends State<ExpenseLoggingScreen> {
             ),
           ),
         ),
+        if (errorText != null) ...[
+          SizedBox(height: 8.0),
+          Text(
+            errorText,
+            style: TextStyle(
+              fontFamily: 'SpaceGrotesk',
+              fontSize: 14,
+              color: Colors.red,
+            ),
+          ),
+        ],
       ],
     );
   }

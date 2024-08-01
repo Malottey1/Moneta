@@ -15,17 +15,67 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  String? _emailError;
+  String? _passwordError;
+
+  bool _validateEmail(String email) {
+    if (email.isEmpty) {
+      setState(() {
+        _emailError = 'Email is required';
+      });
+      return false;
+    }
+    String emailPattern = r'^[^@]+@[^@]+\.[^@]+';
+    RegExp regex = RegExp(emailPattern);
+    if (!regex.hasMatch(email)) {
+      setState(() {
+        _emailError = 'Enter a valid email';
+      });
+      return false;
+    }
+    if (email.length < 5 || email.length > 255) {
+      setState(() {
+        _emailError = 'Email length should be between 5 and 255 characters';
+      });
+      return false;
+    }
+    setState(() {
+      _emailError = null;
+    });
+    return true;
+  }
+
+  bool _validatePassword(String password) {
+    if (password.isEmpty) {
+      setState(() {
+        _passwordError = 'Password is required';
+      });
+      return false;
+    }
+    setState(() {
+      _passwordError = null;
+    });
+    return true;
+  }
+
   void _login() async {
+    String email = _emailController.text;
+    String password = _passwordController.text;
+
+    if (!_validateEmail(email) || !_validatePassword(password)) {
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
-    print('Attempting to login with email: ${_emailController.text} and password: ${_passwordController.text}');
+    print('Attempting to login with email: $email and password: $password');
 
     try {
       final response = await ApiService().loginUser(
-        _emailController.text,
-        _passwordController.text,
+        email,
+        password,
       );
 
       print('Login response: $response');
@@ -143,6 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
               controller: _emailController,
               decoration: InputDecoration(
                 hintText: 'Email Address',
+                errorText: _emailError,
                 filled: true,
                 fillColor: Colors.grey[200],
                 border: OutlineInputBorder(
@@ -156,6 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
               controller: _passwordController,
               decoration: InputDecoration(
                 hintText: 'Password',
+                errorText: _passwordError,
                 filled: true,
                 fillColor: Colors.grey[200],
                 border: OutlineInputBorder(

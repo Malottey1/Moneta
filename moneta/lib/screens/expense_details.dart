@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'expense_edit.dart';
 import 'package:provider/provider.dart';
 import 'package:moneta/services/api_service.dart';
 import 'package:moneta/providers/user_provider.dart';
+import 'expense_edit.dart';
 
 class ExpenseDetailsScreen extends StatefulWidget {
   final String id;
@@ -10,7 +10,7 @@ class ExpenseDetailsScreen extends StatefulWidget {
   final String description;
   final String amount;
   final String date;
-  final String receiptImageUrl;
+  String receiptImageUrl;
 
   ExpenseDetailsScreen({
     required this.id,
@@ -36,7 +36,23 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
   }
 
   Future<void> _fetchExpenseDetails() async {
-    // Fetch the expense details from your API or database
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userId = userProvider.userId.toString();
+
+    try {
+      final response = await ApiService().getExpenseDetails(widget.id, userId);
+      if (response['status'] == 'success') {
+        setState(() {
+          widget.receiptImageUrl = 'https://moneta.icu/api/receipts/' + response['expense']['receipt_image'];
+        });
+      } else {
+        throw Exception(response['message']);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch expense details. Please try again.')),
+      );
+    }
   }
 
   Future<void> _deleteExpense(BuildContext context) async {
